@@ -68,8 +68,6 @@ public strictfp class RobotPlayer {
     		if (rc.senseFlooding(rc.getLocation().add(dir).add(dir)))
     			tryMove(dir.opposite());
     	
-    	
-    	
     	if(!tryMove(nextMove))
     		nextMove = randomDirection();
     	
