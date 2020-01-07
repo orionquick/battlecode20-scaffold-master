@@ -4,13 +4,17 @@ import battlecode.common.*;
 public strictfp class RobotPlayer {
     static RobotController rc;
 
-    static Direction[] directions = {Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST};
+    static Direction[] directions = Direction.allDirections();
+    static Direction[] cardinalDirections = Direction.cardinalDirections();
+    static Direction[] nonCardinalDirections = {Direction.NORTHEAST, Direction.SOUTHEAST, Direction.SOUTHWEST, Direction.NORTHWEST};
+    
     static RobotType[] spawnedByMiner = {RobotType.REFINERY, RobotType.VAPORATOR, RobotType.DESIGN_SCHOOL,
             RobotType.FULFILLMENT_CENTER, RobotType.NET_GUN};
 
     static int turnCount;
 
-    static Direction nextMove = Direction.NORTH;
+    static Direction nextMove;
+    static int moveCount;
     
     /**
      * run() is the method that is called when a robot is instantiated in the Battlecode world.
@@ -24,6 +28,8 @@ public strictfp class RobotPlayer {
         RobotPlayer.rc = rc;
         
         turnCount = 0;
+        nextMove = Direction.NORTHEAST;
+        moveCount = 0;
 
         System.out.println("I'm a " + rc.getType() + " and I just got created!");
         while (true) {
@@ -57,20 +63,23 @@ public strictfp class RobotPlayer {
     }
 
     static void runHQ() throws GameActionException {
-        for (Direction dir : directions)
+        for (Direction dir : cardinalDirections)
             tryBuild(RobotType.MINER, dir);
     }
     
     static void runMiner() throws GameActionException {
     	
     	// run from flood
-    	for (Direction dir : directions)
-    		if (rc.senseFlooding(rc.getLocation().add(dir).add(dir)))
+    	for (Direction dir : cardinalDirections)
+    		if (rc.senseFlooding(rc.getLocation().add(dir).add(dir).add(dir)))
     			tryMove(dir.opposite());
     	
-    	if(!tryMove(nextMove))
-    		nextMove = randomDirection();
-    	
+    	// move in straight diagonal line until stopped or until its gone 7 units in one direction, then change directions
+    	if(!tryMove(nextMove) || moveCount == 7)
+    	{	
+    		nextMove = randomNonCardinalDirection();
+    		moveCount = 0;
+    	}
     }
     
     static void runRefinery() throws GameActionException {
@@ -86,7 +95,7 @@ public strictfp class RobotPlayer {
     }
 
     static void runFulfillmentCenter() throws GameActionException {
-        for (Direction dir : directions)
+        for (Direction dir : cardinalDirections)
             tryBuild(RobotType.DELIVERY_DRONE, dir);
     }
 
@@ -107,7 +116,7 @@ public strictfp class RobotPlayer {
             }
         } else {
             // No close robots, so search for robots within sight radius
-            tryMove(randomDirection());
+            tryMove(randomNonCardinalDirection());
         }
     }
 
@@ -124,6 +133,24 @@ public strictfp class RobotPlayer {
         return directions[(int) (Math.random() * directions.length)];
     }
 
+    /**
+     * Returns a random Direction.
+     *
+     * @return a random Direction
+     */
+    static Direction randomCardinalDirection() {
+        return cardinalDirections[(int) (Math.random() * cardinalDirections.length)];
+    }
+    
+    /**
+     * Returns a random Direction.
+     *
+     * @return a random Direction
+     */
+    static Direction randomNonCardinalDirection() {
+        return nonCardinalDirections[(int) (Math.random() * nonCardinalDirections.length)];
+    }
+    
     /**
      * Returns a random RobotType spawned by miners.
      *
@@ -159,6 +186,7 @@ public strictfp class RobotPlayer {
     static boolean tryMove(Direction dir) throws GameActionException {
         // System.out.println("I am trying to move " + dir + "; " + rc.isReady() + " " + rc.getCooldownTurns() + " " + rc.canMove(dir));
         if (rc.isReady() && rc.canMove(dir)) {
+        	moveCount++;
             rc.move(dir);
             return true;
         } else return false;
