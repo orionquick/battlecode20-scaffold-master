@@ -1,4 +1,4 @@
-package krakenplayer;
+package aldebaranplayer;
 import battlecode.common.*;
 
 public strictfp class RobotPlayer {
@@ -10,6 +10,8 @@ public strictfp class RobotPlayer {
 
     static int turnCount;
 
+    static Direction nextMove = Direction.NORTH;
+    
     /**
      * run() is the method that is called when a robot is instantiated in the Battlecode world.
      * If this method returns, the robot dies!
@@ -20,9 +22,6 @@ public strictfp class RobotPlayer {
         // This is the RobotController object. You use it to perform actions from this robot,
         // and to get information on its current status.
         RobotPlayer.rc = rc;
-
-        // Miner Variables
-        //Direction nextDir = Direction.NORTH;
         
         turnCount = 0;
 
@@ -69,10 +68,8 @@ public strictfp class RobotPlayer {
     		if (rc.senseFlooding(rc.getLocation().add(dir).add(dir)))
     			tryMove(dir.opposite());
     	
-    	
-    	
-    	tryMove(randomDirection());
-    		//nextDir = randomDirection();
+    	if(!tryMove(nextMove))
+    		nextMove = randomDirection();
     	
     }
     
