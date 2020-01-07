@@ -21,6 +21,9 @@ public strictfp class RobotPlayer {
         // and to get information on its current status.
         RobotPlayer.rc = rc;
 
+        // Miner Variables
+        //Direction nextDir = Direction.NORTH;
+        
         turnCount = 0;
 
         System.out.println("I'm a " + rc.getType() + " and I just got created!");
@@ -67,6 +70,9 @@ public strictfp class RobotPlayer {
     			tryMove(dir.opposite());
     	
     	
+    	
+    	tryMove(randomDirection());
+    		//nextDir = randomDirection();
     	
     }
     
