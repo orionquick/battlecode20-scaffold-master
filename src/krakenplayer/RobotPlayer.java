@@ -18,8 +18,11 @@ public strictfp class RobotPlayer {
     static Direction nextMove;
     static int moveCount;
     
-    static MapLocation HQLocation;
-    static MapLocation RefineryLocation;
+    static MapLocation hqLocation;
+    static MapLocation refineryLocation;
+    static MapLocation mineLocation;
+    
+    static int mode; // explore / to refinery / to mine
     
     /**
      * run() is the method that is called when a robot is instantiated in the Battlecode world.
@@ -41,6 +44,7 @@ public strictfp class RobotPlayer {
         nextMove = randomNonCardinalDirection();
         moveCount = 0;
 
+        mode = 0;
         
         System.out.println("I'm a " + rc.getType() + " and I just got created!");
         while (true) {
@@ -75,7 +79,8 @@ public strictfp class RobotPlayer {
 
     static void runHQ() throws GameActionException {
     	if (minerCount < 2)
-    		tryBuild(RobotType.MINER, Direction.NORTH);
+    		if (tryBuild(RobotType.MINER, Direction.NORTH))
+    			minerCount++;
     }
     
     static void runMiner() throws GameActionException {
@@ -83,8 +88,8 @@ public strictfp class RobotPlayer {
     	// when created
     	if (turnCount == 1)
     	{
-    		HQLocation = rc.adjacentLocation(Direction.SOUTH);
-    		RefineryLocation = rc.adjacentLocation(Direction.SOUTHWEST);
+    		hqLocation = rc.adjacentLocation(Direction.SOUTH);
+    		refineryLocation = rc.adjacentLocation(Direction.SOUTHWEST);
     	}
     	
     	// run from flood
@@ -99,22 +104,44 @@ public strictfp class RobotPlayer {
     	}
     	
     	// try to build a refinery next to the HQ
-    	tryBuild(RobotType.REFINERY, RefineryLocation);
+    	tryBuild(RobotType.REFINERY, refineryLocation);
     	
-    	// try to mine and refine soup
+    	// try to mine soup
         for (Direction dir : directions)
         {
-        	tryMine(dir);
-        	tryRefine(dir);
+        	if(tryMine(dir))
+        	{
+        		mineLocation = rc.getLocation();
+        		mode = 1;
+        	}
         }
         
-    	// move in straight diagonal line until stopped or until its gone 10 units in one direction, then change directions
-    	if(!tryMove(nextMove) || moveCount == 10)
-    	{	
-    		nextMove = randomNonCardinalDirection();
-    		moveCount = 0;
-    	}
-    	
+        // try to refine soup
+        for (Direction dir : directions)
+        	if (tryRefine(dir))
+        		mode = 2;
+        
+        if (mode == 0)
+        {
+	    	// explore in straight diagonal line until stopped or until its gone 10 units in one direction, then change directions
+	    	if(!tryMove(nextMove) || moveCount == 10)
+	    	{	
+	    		nextMove = randomNonCardinalDirection();
+	    		moveCount = 0;
+	    	}
+        }
+        
+        if (mode == 1)
+        {
+        	// travel to refinery
+        	tryMove(rc.getLocation().directionTo(refineryLocation));
+        }
+        
+        if (mode == 2)
+        {
+        	// travel to mine
+        	tryMove(rc.getLocation().directionTo(mineLocation));
+        }   	
     }
     
     static void runRefinery() throws GameActionException {
@@ -238,8 +265,6 @@ public strictfp class RobotPlayer {
     static boolean tryBuild(RobotType type, Direction dir) throws GameActionException {
         if (rc.isReady() && rc.canBuildRobot(type, dir)) {
             rc.buildRobot(type, dir);
-            if (type == RobotType.MINER)
-            	minerCount++;
             return true;
         } else return false;
     }
