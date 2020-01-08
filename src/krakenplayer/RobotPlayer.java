@@ -101,10 +101,13 @@ public strictfp class RobotPlayer {
     	// try to build a refinery next to the HQ
     	tryBuild(RobotType.REFINERY, RefineryLocation);
     	
-    	// try to mine soup
+    	// try to mine and refine soup
         for (Direction dir : directions)
+        {
         	tryMine(dir);
-    	
+        	tryRefine(dir);
+        }
+        
     	// move in straight diagonal line until stopped or until its gone 10 units in one direction, then change directions
     	if(!tryMove(nextMove) || moveCount == 10)
     	{	
