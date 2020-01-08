@@ -78,7 +78,7 @@ public strictfp class RobotPlayer {
     }
 
     static void runHQ() throws GameActionException {
-    	if (minerCount < 2)
+    	if (minerCount < 3)
     		if (tryBuild(RobotType.MINER, Direction.NORTH))
     			minerCount++;
     }
@@ -141,6 +141,8 @@ public strictfp class RobotPlayer {
         {
         	// travel to mine
         	tryMove(rc.getLocation().directionTo(mineLocation));
+        	if (rc.getLocation().distanceSquaredTo(mineLocation) < 1)
+        		mode = 0;
         }   	
     }
     
