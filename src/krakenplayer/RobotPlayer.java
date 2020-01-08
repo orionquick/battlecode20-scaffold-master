@@ -12,7 +12,7 @@ public strictfp class RobotPlayer {
             RobotType.FULFILLMENT_CENTER, RobotType.NET_GUN};
 
     static int turnCount;
-
+    
     static int minerCount;
     
     static Direction nextMove;
@@ -74,7 +74,7 @@ public strictfp class RobotPlayer {
     }
 
     static void runHQ() throws GameActionException {
-    	if (minerCount < 1)
+    	if (minerCount < 5)
     		tryBuild(RobotType.MINER, Direction.NORTH);
     }
     
@@ -87,6 +87,8 @@ public strictfp class RobotPlayer {
     		RefineryLocation = rc.adjacentLocation(Direction.SOUTHWEST);
     	}
     	
+    	tryBuild(RobotType.REFINERY, RefineryLocation);
+    	
     	// run from flood
     	for (Direction dir : cardinalDirections)
     		if (rc.senseFlooding(rc.getLocation().add(dir).add(dir).add(dir)))
@@ -96,8 +98,8 @@ public strictfp class RobotPlayer {
         for (Direction dir : directions)
         	tryMine(dir);
     	
-    	// move in straight diagonal line until stopped or until its gone 7 units in one direction, then change directions
-    	if(!tryMove(nextMove) || moveCount == 5)
+    	// move in straight diagonal line until stopped or until its gone 10 units in one direction, then change directions
+    	if(!tryMove(nextMove) || moveCount == 10)
     	{	
     		nextMove = randomNonCardinalDirection();
     		moveCount = 0;
@@ -231,7 +233,22 @@ public strictfp class RobotPlayer {
             return true;
         } else return false;
     }
-
+    
+    /**
+     * Attempts to build a given robot at a given location.
+     *
+     * @param type The type of the robot to build
+     * @param dir The intended location
+     * @return true if a move was performed
+     * @throws GameActionException
+     */
+    static boolean tryBuild(RobotType type, MapLocation loc) throws GameActionException {   
+	    if (rc.isReady() && rc.getLocation().isAdjacentTo(loc) && rc.canBuildRobot(type, rc.getLocation().directionTo(loc))) {
+            rc.buildRobot(type, rc.getLocation().directionTo(loc));
+            return true;
+	    } else return false;
+    }       
+    
     /**
      * Attempts to mine soup in a given direction.
      *
