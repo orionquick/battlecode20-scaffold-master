@@ -38,7 +38,7 @@ public strictfp class RobotPlayer {
         minerCount = 0;
         
         // for moving units
-        nextMove = randomDirection();
+        nextMove = randomNonCardinalDirection();
         moveCount = 0;
 
         
@@ -74,7 +74,7 @@ public strictfp class RobotPlayer {
     }
 
     static void runHQ() throws GameActionException {
-    	if (minerCount < 5)
+    	if (minerCount < 2)
     		tryBuild(RobotType.MINER, Direction.NORTH);
     }
     
@@ -87,12 +87,19 @@ public strictfp class RobotPlayer {
     		RefineryLocation = rc.adjacentLocation(Direction.SOUTHWEST);
     	}
     	
-    	tryBuild(RobotType.REFINERY, RefineryLocation);
-    	
     	// run from flood
     	for (Direction dir : cardinalDirections)
-    		if (rc.senseFlooding(rc.getLocation().add(dir).add(dir).add(dir)))
-    			tryMove(dir.opposite());
+    	{
+    		if (rc.senseFlooding(rc.getLocation().add(dir).add(dir)))
+    		{
+    			nextMove = dir.opposite();
+    			moveCount = 0;
+    			tryMove(nextMove);    			
+    		}
+    	}
+    	
+    	// try to build a refinery next to the HQ
+    	tryBuild(RobotType.REFINERY, RefineryLocation);
     	
     	// try to mine soup
         for (Direction dir : directions)
