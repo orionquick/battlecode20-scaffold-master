@@ -14,15 +14,27 @@ public strictfp class RobotPlayer {
     static int turnCount;
     
     static int minerCount;
+    static int landscaperCount;
     
     static Direction nextMove;
     static int moveCount;
     
     static MapLocation hqLocation;
-    static MapLocation refineryLocation;
+    static MapLocation fulfillmentCenterLocation;
+    static MapLocation designSchoolLocation;
     static MapLocation mineLocation;
     
-    static int mode; // explore / to refinery / to mine
+    static int mode; // explore / to HQ / to mine
+    
+    static int totalDirtNeeded;
+    
+    static int[][] bunker = {	
+    							{0,0,3,0,0},
+    							{0,3,0,3,0},
+    							{3,0,0,0,3},
+    							{0,3,0,3,0},
+    							{0,0,3,0,0}
+    						};
     
     /**
      * run() is the method that is called when a robot is instantiated in the Battlecode world.
@@ -45,6 +57,7 @@ public strictfp class RobotPlayer {
         moveCount = 0;
 
         mode = 0;
+        totalDirtNeeded = 0;
         
         System.out.println("I'm a " + rc.getType() + " and I just got created!");
         while (true) {
@@ -78,7 +91,7 @@ public strictfp class RobotPlayer {
     }
 
     static void runHQ() throws GameActionException {
-    	if (minerCount < 4)
+    	if (minerCount < 2)
     		if (tryBuild(RobotType.MINER, Direction.NORTH))
     			minerCount++;
     }
@@ -89,7 +102,8 @@ public strictfp class RobotPlayer {
     	if (turnCount == 1)
     	{
     		hqLocation = rc.adjacentLocation(Direction.SOUTH);
-    		refineryLocation = rc.adjacentLocation(Direction.SOUTHWEST);
+    		fulfillmentCenterLocation = rc.adjacentLocation(Direction.SOUTHWEST);
+    		designSchoolLocation = rc.adjacentLocation(Direction.SOUTHEAST);	
     	}
     	
     	// run from flood
@@ -102,9 +116,12 @@ public strictfp class RobotPlayer {
     			tryMove(nextMove);    			
     		}
     	}
+
+    	// try to build a design school next to HQ
+    	tryBuild(RobotType.DESIGN_SCHOOL, designSchoolLocation);
     	
-    	// try to build a refinery next to the HQ
-    	tryBuild(RobotType.REFINERY, refineryLocation);
+    	// try to build a fulfillment center next to HQ
+    	tryBuild(RobotType.FULFILLMENT_CENTER, fulfillmentCenterLocation);    	
     	
     	// try to mine soup
         for (Direction dir : directions)
@@ -133,8 +150,8 @@ public strictfp class RobotPlayer {
         
         if (mode == 1)
         {
-        	// travel to refinery
-        	tryMove(rc.getLocation().directionTo(refineryLocation));
+        	// travel to HQ (Refinery)
+        	tryMove(rc.getLocation().directionTo(hqLocation));
         }
         
         if (mode == 2)
@@ -155,16 +172,56 @@ public strictfp class RobotPlayer {
     }
 
     static void runDesignSchool() throws GameActionException {
-
+    	if (landscaperCount < 1)
+    		if (tryBuild(RobotType.LANDSCAPER, Direction.NORTH))
+    			landscaperCount++;
     }
 
     static void runFulfillmentCenter() throws GameActionException {
-        for (Direction dir : cardinalDirections)
-            tryBuild(RobotType.DELIVERY_DRONE, dir);
+    	
     }
 
     static void runLandscaper() throws GameActionException {
-
+    	
+    	// run from flood
+    	for (Direction dir : cardinalDirections)
+    	{
+    		if (rc.senseFlooding(rc.getLocation().add(dir).add(dir)))
+    		{
+    			nextMove = dir.opposite();
+    			moveCount = 0;
+    			tryMove(nextMove);
+    		}
+    	}
+    	
+    	// find total dirt needed for schematic    	
+    	for (int[] values : bunker)
+    		for (int value : values)
+    			totalDirtNeeded += value;
+    	
+    	if (mode == 0)
+    	{
+    		// go to dig site
+    		tryMove(Direction.NORTHEAST);
+    		if (moveCount > 1)
+    			mode = 1;
+    		
+    	}
+    	if (mode == 1)
+    	{
+    		// dig dirt
+			if(rc.getDirtCarrying() < totalDirtNeeded)
+				rc.digDirt(randomCardinalDirection());
+			else
+				mode = 2;
+    	}
+    	if (mode == 2)
+    	{
+        	// go back to HQ
+    		tryMove(rc.getLocation().directionTo(hqLocation));
+        	if (rc.getLocation().distanceSquaredTo(hqLocation) < 4)
+        		mode = 3;
+    	}
     }
 
     static void runDeliveryDrone() throws GameActionException {
