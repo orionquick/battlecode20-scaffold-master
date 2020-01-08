@@ -13,8 +13,13 @@ public strictfp class RobotPlayer {
 
     static int turnCount;
 
+    static int minerCount;
+    
     static Direction nextMove;
     static int moveCount;
+    
+    static MapLocation HQLocation;
+    static MapLocation RefineryLocation;
     
     /**
      * run() is the method that is called when a robot is instantiated in the Battlecode world.
@@ -28,9 +33,15 @@ public strictfp class RobotPlayer {
         RobotPlayer.rc = rc;
         
         turnCount = 0;
-        nextMove = Direction.NORTHEAST;
+        
+        // for HQ
+        minerCount = 0;
+        
+        // for moving units
+        nextMove = randomDirection();
         moveCount = 0;
 
+        
         System.out.println("I'm a " + rc.getType() + " and I just got created!");
         while (true) {
             turnCount += 1;
@@ -63,23 +74,35 @@ public strictfp class RobotPlayer {
     }
 
     static void runHQ() throws GameActionException {
-        for (Direction dir : cardinalDirections)
-            tryBuild(RobotType.MINER, dir);
+    	if (minerCount < 1)
+    		tryBuild(RobotType.MINER, Direction.NORTH);
     }
     
     static void runMiner() throws GameActionException {
+    	
+    	// when created
+    	if (turnCount == 1)
+    	{
+    		HQLocation = rc.adjacentLocation(Direction.SOUTH);
+    		RefineryLocation = rc.adjacentLocation(Direction.SOUTHWEST);
+    	}
     	
     	// run from flood
     	for (Direction dir : cardinalDirections)
     		if (rc.senseFlooding(rc.getLocation().add(dir).add(dir).add(dir)))
     			tryMove(dir.opposite());
     	
+    	// try to mine soup
+        for (Direction dir : directions)
+        	tryMine(dir);
+    	
     	// move in straight diagonal line until stopped or until its gone 7 units in one direction, then change directions
-    	if(!tryMove(nextMove) || moveCount == 7)
+    	if(!tryMove(nextMove) || moveCount == 5)
     	{	
     		nextMove = randomNonCardinalDirection();
     		moveCount = 0;
     	}
+    	
     }
     
     static void runRefinery() throws GameActionException {
@@ -203,6 +226,8 @@ public strictfp class RobotPlayer {
     static boolean tryBuild(RobotType type, Direction dir) throws GameActionException {
         if (rc.isReady() && rc.canBuildRobot(type, dir)) {
             rc.buildRobot(type, dir);
+            if (type == RobotType.MINER)
+            	minerCount++;
             return true;
         } else return false;
     }

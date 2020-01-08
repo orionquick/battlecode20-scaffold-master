@@ -68,6 +68,10 @@ public strictfp class RobotPlayer {
     		if (rc.senseFlooding(rc.getLocation().add(dir).add(dir)))
     			tryMove(dir.opposite());
     	
+    	// try to mine soup
+        for (Direction dir : directions)
+        	tryMine(dir);
+    	
     	if(!tryMove(nextMove))
     		nextMove = randomDirection();
     	
