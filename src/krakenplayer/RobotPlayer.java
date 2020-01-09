@@ -28,7 +28,7 @@ public strictfp class RobotPlayer {
     static int mode;
     
     
-    static final int MINERLIMIT = 6;
+    static final int MINERLIMIT = 10;
     
     /**
      * run() is the method that is called when a robot is instantiated in the Battlecode world.
@@ -55,7 +55,7 @@ public strictfp class RobotPlayer {
         mode = 0;
         
         while (true) {
-            turnCount += 1;
+            turnCount ++;
             // Try/catch blocks stop unhandled exceptions, which cause your robot to explode
             try {
                 // Here, we've separated the controls into a different method for each RobotType.
@@ -155,9 +155,9 @@ public strictfp class RobotPlayer {
 
     static Direction soupDirection() throws GameActionException { 
     	MapLocation testLoc;
-    	for (int x = -2; x <= 2; x++)
+    	for (int x = -5; x <= 5; x++)
     	{
-    		for (int y = -2; y <= 2; y++)
+    		for (int y = -5; y <= 5; y++)
     		{
     			testLoc = new MapLocation(rc.getLocation().x + x, rc.getLocation().y + y);
     			if (rc.canSenseLocation(testLoc))
