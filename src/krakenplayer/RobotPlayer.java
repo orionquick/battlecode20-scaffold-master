@@ -160,14 +160,12 @@ public strictfp class RobotPlayer {
     		for (int y = -2; y <= 2; y++)
     		{
     			testLoc = new MapLocation(rc.getLocation().x + x, rc.getLocation().y + y);
-    			if (rc.onTheMap(testLoc))
-    			{
-    				System.out.println("Robot: " + rc.getID() + " OnTheMap: [" + testLoc.x + ", " + testLoc.y + "]");
+    			if (rc.canSenseLocation(testLoc))
     				if (rc.senseSoup(testLoc) > 0)
     					return rc.getLocation().directionTo(testLoc);
-    			}
     		}
     	}
+    	 			
     	return Direction.CENTER;
     }
     
