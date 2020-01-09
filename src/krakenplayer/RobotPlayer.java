@@ -28,7 +28,7 @@ public strictfp class RobotPlayer {
     static int mode;
     
     
-    static final int MINERLIMIT = 3;
+    static final int MINERLIMIT = 6;
     
     /**
      * run() is the method that is called when a robot is instantiated in the Battlecode world.
@@ -60,7 +60,6 @@ public strictfp class RobotPlayer {
             try {
                 // Here, we've separated the controls into a different method for each RobotType.
                 // You can add the missing ones or rewrite this into your own control structure.
-                System.out.println("I'm a " + rc.getType() + "! Location " + rc.getLocation());
                 switch (rc.getType()) {
                     case HQ:                 runHQ();                break;
                     case MINER:              runMiner();             break;
@@ -86,8 +85,9 @@ public strictfp class RobotPlayer {
 
     static void runHQ() throws GameActionException {
     	if (minerCount < MINERLIMIT)
-    		if (tryBuild(RobotType.MINER, Direction.NORTH))
-    			minerCount++;
+    		for (Direction dir : directions)
+    			if (tryBuild(RobotType.MINER, dir))
+    				minerCount++;
     }
     
     static void runMiner() throws GameActionException {
@@ -108,7 +108,7 @@ public strictfp class RobotPlayer {
         
         if (mode == 0)														// explore randomly
         	if (!tryMove(soupDirection()))									// if soup can be sensed, go towards it
-	    		if (!tryMove(moveDir) || moveCount % 5 == 0)				// if not, try to move in a direction
+	    		if (!tryMove(moveDir))										// if not, try to move in a direction
 	    			moveDir = randomNonCardinalDirection();					// if cannot, choose a new direction
         
         if (mode == 1)														// return to HQ
@@ -123,7 +123,6 @@ public strictfp class RobotPlayer {
         	if (!tryMove(rc.getLocation().directionTo(miningLocation)))		// try to move toward mining location
         		tryMove(randomDirection());									// if cannot, try to move in a random direction
         }
-
     }
     
     static void runRefinery() throws GameActionException {
@@ -155,10 +154,20 @@ public strictfp class RobotPlayer {
     }
 
     static Direction soupDirection() throws GameActionException { 
-    	for (int i = -4; i < 4; i++)
-    		for (int j = -4; j < 4; j++)
-    			if (rc.senseSoup(new MapLocation(rc.getLocation().x + i, rc.getLocation().y + j)) > 0)
-    				return rc.getLocation().directionTo(new MapLocation(rc.getLocation().x + i, rc.getLocation().y + j));
+    	MapLocation testLoc;
+    	for (int x = -2; x <= 2; x++)
+    	{
+    		for (int y = -2; y <= 2; y++)
+    		{
+    			testLoc = new MapLocation(rc.getLocation().x + x, rc.getLocation().y + y);
+    			if (rc.onTheMap(testLoc))
+    			{
+    				System.out.println("Robot: " + rc.getID() + " OnTheMap: [" + testLoc.x + ", " + testLoc.y + "]");
+    				if (rc.senseSoup(testLoc) > 0)
+    					return rc.getLocation().directionTo(testLoc);
+    			}
+    		}
+    	}
     	return Direction.CENTER;
     }
     
