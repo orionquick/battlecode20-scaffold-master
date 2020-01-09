@@ -55,7 +55,7 @@ public strictfp class RobotPlayer {
         mode = 0;
         
         while (true) {
-            turnCount += 1;
+            turnCount++;
             // Try/catch blocks stop unhandled exceptions, which cause your robot to explode
             try {
                 // Here, we've separated the controls into a different method for each RobotType.
