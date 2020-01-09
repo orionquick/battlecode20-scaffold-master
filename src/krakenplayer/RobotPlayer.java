@@ -155,9 +155,9 @@ public strictfp class RobotPlayer {
 
     static Direction soupDirection() throws GameActionException { 
     	MapLocation testLoc;
-    	for (int x = -2; x <= 2; x++)
+    	for (int x = -5; x <= 5; x++)
     	{
-    		for (int y = -2; y <= 2; y++)
+    		for (int y = -5; y <= 5; y++)
     		{
     			testLoc = new MapLocation(rc.getLocation().x + x, rc.getLocation().y + y);
     			if (rc.canSenseLocation(testLoc))
