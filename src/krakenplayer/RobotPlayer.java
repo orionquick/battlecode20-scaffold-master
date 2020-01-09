@@ -14,27 +14,20 @@ public strictfp class RobotPlayer {
     static int turnCount;
     
     static int minerCount;
-    static int landscaperCount;
     
-    static Direction nextMove;
     static int moveCount;
+    static Direction moveDir;
+    static int errCount;
     
     static MapLocation hqLocation;
     static MapLocation fulfillmentCenterLocation;
     static MapLocation designSchoolLocation;
-    static MapLocation mineLocation;
+    static MapLocation miningLocation;
     
-    static int mode; // explore / to HQ / to mine
+    static int mode;
     
-    static int totalDirtNeeded;
     
-    static int[][] bunker = {	
-    							{0,0,3,0,0},
-    							{0,3,0,3,0},
-    							{3,0,0,0,3},
-    							{0,3,0,3,0},
-    							{0,0,3,0,0}
-    						};
+    static final int MINERLIMIT = 3;
     
     /**
      * run() is the method that is called when a robot is instantiated in the Battlecode world.
@@ -52,14 +45,14 @@ public strictfp class RobotPlayer {
         // for HQ
         minerCount = 0;
         
-        // for moving units
-        nextMove = randomNonCardinalDirection();
+        // for movement
         moveCount = 0;
-
-        mode = 0;
-        totalDirtNeeded = 0;
+        moveDir = randomNonCardinalDirection();
+        errCount = 0;
         
-        System.out.println("I'm a " + rc.getType() + " and I just got created!");
+        // for doing tasks
+        mode = 0;
+        
         while (true) {
             turnCount += 1;
             // Try/catch blocks stop unhandled exceptions, which cause your robot to explode
@@ -91,80 +84,43 @@ public strictfp class RobotPlayer {
     }
 
     static void runHQ() throws GameActionException {
-    	if (minerCount < 2)
+    	if (minerCount < MINERLIMIT)
     		if (tryBuild(RobotType.MINER, Direction.NORTH))
     			minerCount++;
     }
     
     static void runMiner() throws GameActionException {
     	
-    	// when created
-    	if (turnCount == 1)
-    	{
-    		hqLocation = rc.adjacentLocation(Direction.SOUTH);
-    		fulfillmentCenterLocation = rc.adjacentLocation(Direction.SOUTHWEST);
-    		designSchoolLocation = rc.adjacentLocation(Direction.SOUTHEAST);	
-    	}
+    	if (turnCount == 1)													// on turn 1
+    		hqLocation = rc.adjacentLocation(Direction.SOUTH);				// set HQ location
     	
-    	// run from flood
-    	for (Direction dir : cardinalDirections)
-    	{
-    		if (rc.senseFlooding(rc.getLocation().add(dir).add(dir)))
-    		{
-    			nextMove = dir.opposite();
-    			moveCount = 0;
-    			tryMove(nextMove);    			
-    		}
-    	}
-
-    	// try to build a design school next to HQ
-    	tryBuild(RobotType.DESIGN_SCHOOL, designSchoolLocation);
-    	
-    	// try to build a fulfillment center next to HQ
-    	tryBuild(RobotType.FULFILLMENT_CENTER, fulfillmentCenterLocation);    	
-    	
-    	// try to mine soup
-        for (Direction dir : directions)
-        {
-        	if(tryMine(dir))
-        	{
-        		mineLocation = rc.getLocation();
-        		mode = 1;
-        	}
-        }
+        for (Direction dir : directions)									// in all directions
+        	if(tryMine(dir))												// try to mine soup
+        		miningLocation = rc.getLocation().add(dir);					// if mined, save location
         
-        // try to refine soup
-        for (Direction dir : directions)
-        	if (tryRefine(dir))
-        		mode = 2;
+        for (Direction dir : directions)									// in all directions
+        	if (tryRefine(dir))												// try to refine soup
+        		mode = 2;													// if refined, go back to mining location
         
-        if (mode == 0)
-        {
-	    	// explore in straight diagonal line until stopped or until its gone 10 units in one direction, then change directions
-	    	if(!tryMove(nextMove) || moveCount == 10)
-	    	{	
-	    		nextMove = randomNonCardinalDirection();
-	    		moveCount = 0;
-	    	}
-        }
+        if (rc.getSoupCarrying() == RobotType.MINER.soupLimit)				// if soup is full
+        	mode = 1;														// return to HQ
         
-        if (mode == 1)
-        {
-        	// travel to HQ (Refinery)
-        	tryMove(rc.getLocation().directionTo(hqLocation));
-        }
+        if (mode == 0)														// explore randomly
+        	if (!tryMove(soupDirection()))									// if soup can be sensed, go towards it
+	    		if (!tryMove(moveDir))										// if not, try to move in a direction
+	    			moveDir = randomNonCardinalDirection();					// if cannot, choose a new direction
         
-        if (mode == 2)
-        {
-        	// travel to mine
-        	tryMove(rc.getLocation().directionTo(mineLocation));
-        	if (rc.getLocation().distanceSquaredTo(mineLocation) < 4)
-        		mode = 0;
-        }   	
+        if (mode == 1)														// return to HQ
+        	if (!tryMove(rc.getLocation().directionTo(hqLocation)))			// try to move toward HQ
+        		tryMove(randomDirection());									// if cannot, try to move in a random direction
+        
+        if (mode == 2)														// return to mining location
+        	if (!tryMove(rc.getLocation().directionTo(miningLocation)))		// try to move toward mining location
+        		tryMove(randomDirection());									// if cannot, try to move in a random direction
     }
     
     static void runRefinery() throws GameActionException {
-        // System.out.println("Pollution: " + rc.sensePollution(rc.getLocation()));
+
     }
 
     static void runVaporator() throws GameActionException {
@@ -172,9 +128,7 @@ public strictfp class RobotPlayer {
     }
 
     static void runDesignSchool() throws GameActionException {
-    	if (landscaperCount < 1)
-    		if (tryBuild(RobotType.LANDSCAPER, Direction.NORTH))
-    			landscaperCount++;
+
     }
 
     static void runFulfillmentCenter() throws GameActionException {
@@ -183,68 +137,23 @@ public strictfp class RobotPlayer {
 
     static void runLandscaper() throws GameActionException {
     	
-    	// run from flood
-    	for (Direction dir : cardinalDirections)
-    	{
-    		if (rc.senseFlooding(rc.getLocation().add(dir).add(dir)))
-    		{
-    			nextMove = dir.opposite();
-    			moveCount = 0;
-    			tryMove(nextMove);
-    		}
-    	}
-    	
-    	// find total dirt needed for schematic    	
-    	for (int[] values : bunker)
-    		for (int value : values)
-    			totalDirtNeeded += value;
-    	
-    	if (mode == 0)
-    	{
-    		// go to dig site
-    		tryMove(Direction.NORTHEAST);
-    		if (moveCount > 1)
-    			mode = 1;
-    		
-    	}
-    	if (mode == 1)
-    	{
-    		// dig dirt
-			if(rc.getDirtCarrying() < totalDirtNeeded)
-				rc.digDirt(randomCardinalDirection());
-			else
-				mode = 2;
-    	}
-    	if (mode == 2)
-    	{
-        	// go back to HQ
-    		tryMove(rc.getLocation().directionTo(hqLocation));
-        	if (rc.getLocation().distanceSquaredTo(hqLocation) < 4)
-        		mode = 3;
-    	}
     }
 
     static void runDeliveryDrone() throws GameActionException {
-        Team enemy = rc.getTeam().opponent();
-        if (!rc.isCurrentlyHoldingUnit()) {
-            // See if there are any enemy robots within striking range (distance 1 from lumberjack's radius)
-            RobotInfo[] robots = rc.senseNearbyRobots(GameConstants.DELIVERY_DRONE_PICKUP_RADIUS_SQUARED, enemy);
 
-            if (robots.length > 0) {
-                // Pick up a first robot within range
-                rc.pickUpUnit(robots[0].getID());
-                System.out.println("I picked up " + robots[0].getID() + "!");
-            }
-        } else {
-            // No close robots, so search for robots within sight radius
-            tryMove(randomNonCardinalDirection());
-        }
     }
 
     static void runNetGun() throws GameActionException {
 
     }
 
+    static Direction soupDirection() throws GameActionException {
+    	for (Direction dir : directions)
+    		if (rc.senseSoup(rc.getLocation().add(dir)) > 0 || rc.senseSoup(rc.getLocation().add(dir).add(dir)) > 0 ||  rc.senseSoup(rc.getLocation().add(dir).add(dir).add(dir)) > 0 )
+    			return dir;
+    	return Direction.CENTER;
+    }
+    
     /**
      * Returns a random Direction.
      *
@@ -286,15 +195,6 @@ public strictfp class RobotPlayer {
             if (tryMove(dir))
                 return true;
         return false;
-        // MapLocation loc = rc.getLocation();
-        // if (loc.x < 10 && loc.x < loc.y)
-        //     return tryMove(Direction.EAST);
-        // else if (loc.x < 10)
-        //     return tryMove(Direction.SOUTH);
-        // else if (loc.x > loc.y)
-        //     return tryMove(Direction.WEST);
-        // else
-        //     return tryMove(Direction.NORTH);
     }
 
     /**
@@ -305,7 +205,6 @@ public strictfp class RobotPlayer {
      * @throws GameActionException
      */
     static boolean tryMove(Direction dir) throws GameActionException {
-        // System.out.println("I am trying to move " + dir + "; " + rc.isReady() + " " + rc.getCooldownTurns() + " " + rc.canMove(dir));
         if (rc.isReady() && rc.canMove(dir)) {
         	moveCount++;
             rc.move(dir);
@@ -381,6 +280,5 @@ public strictfp class RobotPlayer {
             if (rc.canSubmitTransaction(message, 10))
                 rc.submitTransaction(message, 10);
         }
-        // System.out.println(rc.getRoundMessages(turnCount-1));
     }
 }
