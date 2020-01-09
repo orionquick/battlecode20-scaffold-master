@@ -1,4 +1,5 @@
 package krakenplayer;
+
 import battlecode.common.*;
 
 public strictfp class RobotPlayer {
@@ -107,7 +108,7 @@ public strictfp class RobotPlayer {
         
         if (mode == 0)														// explore randomly
         	if (!tryMove(soupDirection()))									// if soup can be sensed, go towards it
-	    		if (!tryMove(moveDir))										// if not, try to move in a direction
+	    		if (!tryMove(moveDir) || moveCount % 5 == 0)				// if not, try to move in a direction
 	    			moveDir = randomNonCardinalDirection();					// if cannot, choose a new direction
         
         if (mode == 1)														// return to HQ
@@ -115,8 +116,14 @@ public strictfp class RobotPlayer {
         		tryMove(randomDirection());									// if cannot, try to move in a random direction
         
         if (mode == 2)														// return to mining location
+        {
+        	if (rc.getLocation().distanceSquaredTo(miningLocation) < 4)		// if near mining location
+        		if (soupDirection() == Direction.CENTER)					// and no soup nearby
+        			mode = rc.getSoupCarrying() == 0 ? 0 : 1;				// explore if soup empty, back to HQ if not
         	if (!tryMove(rc.getLocation().directionTo(miningLocation)))		// try to move toward mining location
         		tryMove(randomDirection());									// if cannot, try to move in a random direction
+        }
+
     }
     
     static void runRefinery() throws GameActionException {
@@ -147,10 +154,11 @@ public strictfp class RobotPlayer {
 
     }
 
-    static Direction soupDirection() throws GameActionException {
-    	for (Direction dir : directions)
-    		if (rc.senseSoup(rc.getLocation().add(dir)) > 0 || rc.senseSoup(rc.getLocation().add(dir).add(dir)) > 0 ||  rc.senseSoup(rc.getLocation().add(dir).add(dir).add(dir)) > 0 )
-    			return dir;
+    static Direction soupDirection() throws GameActionException { 
+    	for (int i = -4; i < 4; i++)
+    		for (int j = -4; j < 4; j++)
+    			if (rc.senseSoup(new MapLocation(rc.getLocation().x + i, rc.getLocation().y + j)) > 0)
+    				return rc.getLocation().directionTo(new MapLocation(rc.getLocation().x + i, rc.getLocation().y + j));
     	return Direction.CENTER;
     }
     
