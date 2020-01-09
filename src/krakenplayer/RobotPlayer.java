@@ -8,28 +8,28 @@ public strictfp class RobotPlayer {
     static Direction[] directions = Direction.allDirections();
     static Direction[] cardinalDirections = Direction.cardinalDirections();
     static Direction[] nonCardinalDirections = {Direction.NORTHEAST, Direction.SOUTHEAST, Direction.SOUTHWEST, Direction.NORTHWEST};
-    
+
     static RobotType[] spawnedByMiner = {RobotType.REFINERY, RobotType.VAPORATOR, RobotType.DESIGN_SCHOOL,
             RobotType.FULFILLMENT_CENTER, RobotType.NET_GUN};
 
     static int turnCount;
-    
+
     static int minerCount;
-    
+
     static int moveCount;
     static Direction moveDir;
     static int errCount;
-    
+
     static MapLocation hqLocation;
     static MapLocation fulfillmentCenterLocation;
     static MapLocation designSchoolLocation;
     static MapLocation miningLocation;
-    
+
     static int mode;
-    
-    
+
+
     static final int MINERLIMIT = 10;
-    
+
     /**
      * run() is the method that is called when a robot is instantiated in the Battlecode world.
      * If this method returns, the robot dies!
@@ -40,20 +40,20 @@ public strictfp class RobotPlayer {
         // This is the RobotController object. You use it to perform actions from this robot,
         // and to get information on its current status.
         RobotPlayer.rc = rc;
-        
+
         turnCount = 0;
-        
+
         // for HQ
         minerCount = 0;
-        
+
         // for movement
         moveCount = 0;
         moveDir = randomNonCardinalDirection();
         errCount = 0;
-        
+
         // for doing tasks
         mode = 0;
-        
+
         while (true) {
             turnCount ++;
             // Try/catch blocks stop unhandled exceptions, which cause your robot to explode
@@ -89,32 +89,32 @@ public strictfp class RobotPlayer {
     			if (tryBuild(RobotType.MINER, dir))
     				minerCount++;
     }
-    
+
     static void runMiner() throws GameActionException {
-    	
+
     	if (turnCount == 1)													// on turn 1
     		hqLocation = rc.adjacentLocation(Direction.SOUTH);				// set HQ location
-    	
+
         for (Direction dir : directions)									// in all directions
         	if(tryMine(dir))												// try to mine soup
         		miningLocation = rc.getLocation().add(dir);					// if mined, save location
-        
+
         for (Direction dir : directions)									// in all directions
         	if (tryRefine(dir))												// try to refine soup
         		mode = 2;													// if refined, go back to mining location
-        
+
         if (rc.getSoupCarrying() == RobotType.MINER.soupLimit)				// if soup is full
         	mode = 1;														// return to HQ
-        
+
         if (mode == 0)														// explore randomly
         	if (!tryMove(soupDirection()))									// if soup can be sensed, go towards it
 	    		if (!tryMove(moveDir))										// if not, try to move in a direction
 	    			moveDir = randomNonCardinalDirection();					// if cannot, choose a new direction
-        
+
         if (mode == 1)														// return to HQ
         	if (!tryMove(rc.getLocation().directionTo(hqLocation)))			// try to move toward HQ
         		tryMove(randomDirection());									// if cannot, try to move in a random direction
-        
+
         if (mode == 2)														// return to mining location
         {
         	if (rc.getLocation().distanceSquaredTo(miningLocation) < 4)		// if near mining location
@@ -124,7 +124,7 @@ public strictfp class RobotPlayer {
         		tryMove(randomDirection());									// if cannot, try to move in a random direction
         }
     }
-    
+
     static void runRefinery() throws GameActionException {
 
     }
@@ -138,11 +138,11 @@ public strictfp class RobotPlayer {
     }
 
     static void runFulfillmentCenter() throws GameActionException {
-    	
+
     }
 
     static void runLandscaper() throws GameActionException {
-    	
+
     }
 
     static void runDeliveryDrone() throws GameActionException {
@@ -153,7 +153,7 @@ public strictfp class RobotPlayer {
 
     }
 
-    static Direction soupDirection() throws GameActionException { 
+    static Direction soupDirection() throws GameActionException {
     	MapLocation testLoc;
     	for (int x = -5; x <= 5; x++)
     	{
@@ -165,10 +165,10 @@ public strictfp class RobotPlayer {
     					return rc.getLocation().directionTo(testLoc);
     		}
     	}
-    	 			
+
     	return Direction.CENTER;
     }
-    
+
     /**
      * Returns a random Direction.
      *
@@ -186,7 +186,7 @@ public strictfp class RobotPlayer {
     static Direction randomCardinalDirection() {
         return cardinalDirections[(int) (Math.random() * cardinalDirections.length)];
     }
-    
+
     /**
      * Returns a random Direction.
      *
@@ -195,7 +195,7 @@ public strictfp class RobotPlayer {
     static Direction randomNonCardinalDirection() {
         return nonCardinalDirections[(int) (Math.random() * nonCardinalDirections.length)];
     }
-    
+
     /**
      * Returns a random RobotType spawned by miners.
      *
@@ -241,7 +241,7 @@ public strictfp class RobotPlayer {
             return true;
         } else return false;
     }
-    
+
     /**
      * Attempts to build a given robot at a given location.
      *
@@ -250,13 +250,13 @@ public strictfp class RobotPlayer {
      * @return true if a move was performed
      * @throws GameActionException
      */
-    static boolean tryBuild(RobotType type, MapLocation loc) throws GameActionException {   
+    static boolean tryBuild(RobotType type, MapLocation loc) throws GameActionException {
 	    if (rc.isReady() && rc.getLocation().isAdjacentTo(loc) && rc.canBuildRobot(type, rc.getLocation().directionTo(loc))) {
             rc.buildRobot(type, rc.getLocation().directionTo(loc));
             return true;
 	    } else return false;
-    }       
-    
+    }
+
     /**
      * Attempts to mine soup in a given direction.
      *
