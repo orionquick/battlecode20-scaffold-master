@@ -165,9 +165,9 @@ public strictfp class RobotPlayer {
     	switch (mode) {
     		case 0 : moveDir = rc.getLocation().directionTo(hqTest1); if (rc.getLocation().distanceSquaredTo(hqTest1) < 4) if (enemyHQDirection() == Direction.CENTER) mode++;	break;
     		case 1 : moveDir = rc.getLocation().directionTo(hqTest2); if (rc.getLocation().distanceSquaredTo(hqTest2) < 4) if (enemyHQDirection() == Direction.CENTER) mode++;	break;
-    		case 2 : moveDir = rc.getLocation().directionTo(hqTest3);	break;
-    		case 3 : moveDir = enemyHQDirection();						break;
-    		default:													break;
+    		case 2 : moveDir = rc.getLocation().directionTo(hqTest3);																											break;
+    		case 3 : moveDir = enemyHQDirection();																																break;
+    		default:																																							break;
     	}
     	
     	if (mode < 4)
