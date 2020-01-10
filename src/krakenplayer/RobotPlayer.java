@@ -20,8 +20,8 @@ public strictfp class RobotPlayer {
     static Direction prevDir;
     
     static MapLocation hqLocation;
-    static MapLocation fulfillmentCenterLocation;
-    static MapLocation designSchoolLocation;
+    static MapLocation fcLocation;
+    static MapLocation dsLocation;
     static MapLocation miningLocation;
     
     static int mode;
@@ -83,18 +83,17 @@ public strictfp class RobotPlayer {
 
     static void runHQ() throws GameActionException {
     	if (minerCount < MINERLIMIT)
-    		for (Direction dir : directions)
-    			if (tryBuild(RobotType.MINER, dir))
-    				minerCount++;
+			if (tryBuild(RobotType.MINER, Direction.NORTH))
+				minerCount++;
     }
 
     static void runMiner() throws GameActionException {
-
-    	System.out.println(rc.getSoupCarrying());
     	
-    	if (turnCount == 1)															// on turn 1
+    	if (turnCount == 1)	{														// on turn 1
     		hqLocation = rc.adjacentLocation(Direction.SOUTH);						// set HQ location
-
+    		dsLocation = rc.getLocation().add(Direction.SOUTHEAST).add(Direction.EAST);
+    	}
+    	
         for (Direction dir : directions)											// in all directions
         	if(tryMine(dir))														// try to mine soup
         		miningLocation = rc.getLocation().add(dir);							// if mined, save location
@@ -107,10 +106,12 @@ public strictfp class RobotPlayer {
         	mode = 1;																// return to HQ
         
         switch (mode) {
-        	case 0 : if(!tryMove(moveDir)) {moveDir = randomNonCardinalDirection();}			break;
-	        case 1 : moveDir = rc.getLocation().directionTo(hqLocation);						break;
-	        case 2 : moveDir = rc.getLocation().directionTo(miningLocation); 					break;
+        	case 0 : tryMove(moveDir); if(moveCount % 5 == 0) {moveDir = randomNonCardinalDirection();}	break;
+	        case 1 : moveDir = rc.getLocation().directionTo(hqLocation);				break;
+	        case 2 : moveDir = rc.getLocation().directionTo(miningLocation); 			break;
         }
+        
+        System.out.println(moveDir);
         
         if (rc.getSoupCarrying() < RobotType.MINER.soupLimit && soupDirection() != Direction.CENTER)
         	moveDir = soupDirection();
