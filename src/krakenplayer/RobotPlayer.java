@@ -5,7 +5,7 @@ import battlecode.common.*;
 public strictfp class RobotPlayer {
     static RobotController rc;
 
-    static Direction[] directions = Direction.allDirections();
+    static Direction[] directions = {Direction.NORTH, Direction.NORTHEAST, Direction.EAST, Direction.SOUTHEAST, Direction.SOUTH, Direction.SOUTHWEST, Direction.WEST, Direction.NORTHWEST};
     static Direction[] cardinalDirections = Direction.cardinalDirections();
     static Direction[] nonCardinalDirections = {Direction.NORTHEAST, Direction.SOUTHEAST, Direction.SOUTHWEST, Direction.NORTHWEST};
 
@@ -13,20 +13,18 @@ public strictfp class RobotPlayer {
             RobotType.FULFILLMENT_CENTER, RobotType.NET_GUN};
 
     static int turnCount;
-
     static int minerCount;
-
+    
     static int moveCount;
     static Direction moveDir;
-    static int errCount;
 
     static MapLocation hqLocation;
     static MapLocation fulfillmentCenterLocation;
     static MapLocation designSchoolLocation;
     static MapLocation miningLocation;
-
+    static MapLocation startedPathing;
+    
     static int mode;
-
 
     static final int MINERLIMIT = 10;
 
@@ -49,7 +47,6 @@ public strictfp class RobotPlayer {
         // for movement
         moveCount = 0;
         moveDir = randomNonCardinalDirection();
-        errCount = 0;
 
         // for doing tasks
         mode = 0;
@@ -92,37 +89,38 @@ public strictfp class RobotPlayer {
 
     static void runMiner() throws GameActionException {
 
-    	if (turnCount == 1)													// on turn 1
-    		hqLocation = rc.adjacentLocation(Direction.SOUTH);				// set HQ location
+    	if (turnCount == 1)															// on turn 1
+    		hqLocation = rc.adjacentLocation(Direction.SOUTH);						// set HQ location
 
-        for (Direction dir : directions)									// in all directions
-        	if(tryMine(dir))												// try to mine soup
-        		miningLocation = rc.getLocation().add(dir);					// if mined, save location
+        for (Direction dir : directions)											// in all directions
+        	if(tryMine(dir))														// try to mine soup
+        		miningLocation = rc.getLocation().add(dir);							// if mined, save location
 
-        for (Direction dir : directions)									// in all directions
-        	if (tryRefine(dir))												// try to refine soup
-        		mode = 2;													// if refined, go back to mining location
+        for (Direction dir : directions)											// in all directions
+        	if (tryRefine(dir))														// try to refine soup
+        		mode = 2;															// if refined, go back to mining location
+        
+        if (rc.getSoupCarrying() == RobotType.MINER.soupLimit)						// if soup is full
+        	mode = 1;																// return to HQ
 
-        if (rc.getSoupCarrying() == RobotType.MINER.soupLimit)				// if soup is full
-        	mode = 1;														// return to HQ
+        else																		// if soup is not full
+        	tryMove(soupDirection());												// if soup can be sensed, go towards it
+        
+        if (mode == 0)																// explore randomly
+	    	if (!tryMove(moveDir))													// try to move in a direction
+	    		moveDir = randomNonCardinalDirection();								// if cannot, choose a new direction
 
-        if (mode == 0)														// explore randomly
-        	if (!tryMove(soupDirection()))									// if soup can be sensed, go towards it
-	    		if (!tryMove(moveDir))										// if not, try to move in a direction
-	    			moveDir = randomNonCardinalDirection();					// if cannot, choose a new direction
+        if (mode == 1)																// return to HQ
+        	if (!tryMove(rc.getLocation().directionTo(hqLocation)))					// try to move toward HQ
+        		tryMove(randomDirection());											// if cannot, try to move in a random direction
 
-        if (mode == 1)														// return to HQ
-        	if (!tryMove(rc.getLocation().directionTo(hqLocation)))			// try to move toward HQ
-        		tryMove(randomDirection());									// if cannot, try to move in a random direction
-
-        if (mode == 2)														// return to mining location
-        {
-        	if (rc.getLocation().distanceSquaredTo(miningLocation) < 4)		// if near mining location
-        		if (soupDirection() == Direction.CENTER)					// and no soup nearby
-        			mode = rc.getSoupCarrying() == 0 ? 0 : 1;				// explore if soup empty, back to HQ if not
-        	if (!tryMove(rc.getLocation().directionTo(miningLocation)))		// try to move toward mining location
-        		tryMove(randomDirection());									// if cannot, try to move in a random direction
-        }
+        if (mode == 2)																// return to mining location
+        	if (!tryMove(rc.getLocation().directionTo(miningLocation)))				// try to move toward mining location
+        		tryMove(randomDirection());											// if cannot, try to move in a random direction
+        
+    	if (mode == 2 && rc.getLocation().distanceSquaredTo(miningLocation) < 4)	// if going to mine and near mining location
+    		if (soupDirection() == Direction.CENTER)								// and no soup nearby
+    			mode = rc.getSoupCarrying() == 0 ? 0 : 1;							// explore if soup empty, back to HQ if not
     }
 
     static void runRefinery() throws GameActionException {
