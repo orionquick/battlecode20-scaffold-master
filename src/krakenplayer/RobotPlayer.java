@@ -135,9 +135,14 @@ public strictfp class RobotPlayer {
         if (rc.getSoupCarrying() < RobotType.MINER.soupLimit && soupDirection() != Direction.CENTER)
         	moveDir = soupDirection();
         
-		for (int i = 0; i < 8; i++)
-			if (moveDir == prevDir.opposite() || !tryMove(moveDir))
+		for (int i = 0; i < 16; i++) { 
+			if (moveDir == prevDir.opposite() || !tryMove(moveDir)) {
+				if (i > 7)
+					if(!tryMove(moveDir))
+						moveDir = moveDir.rotateRight();
 				moveDir = moveDir.rotateRight();
+			}
+		}
 		
     	if (mode == 2 && rc.getLocation().distanceSquaredTo(miningLocation) < 4)	// if going to mine and near mining location
     		if (soupDirection() == Direction.CENTER)								// and no soup nearby
@@ -181,12 +186,13 @@ public strictfp class RobotPlayer {
     	
     	System.out.println(mode + ", " + subType);
     	
-		if (enemyHQLocation() != null) {
-			enemyHQLocation = enemyHQLocation();
-			mode = 3;
-		}
-    	
     	if (subType == RUSHER) {	    	
+    		
+    		if (mode < 4 && enemyHQLocation() != null) {
+    			enemyHQLocation = enemyHQLocation();
+    			mode = 3;
+    		}
+    		
 	    	switch (mode) {
 	    		case 0 : 	moveDir = rc.getLocation().directionTo(hqTest1); 
 	    					if (rc.getLocation().distanceSquaredTo(hqTest1) < 4) {
@@ -422,6 +428,7 @@ public strictfp class RobotPlayer {
      * @throws GameActionException
      */
     static boolean tryBuild(RobotType type, Direction dir) throws GameActionException {
+    	
         if (rc.isReady() && rc.canBuildRobot(type, dir)) {
 	    	if (type == RobotType.MINER)
 	    		minerCount++;
