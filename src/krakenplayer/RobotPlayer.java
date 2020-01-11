@@ -32,7 +32,7 @@ public strictfp class RobotPlayer {
 	
     static int mode;
 
-    static final int MINERLIMIT = 5;
+    static final int MINERLIMIT = 10;
     static final int LANDSCAPERLIMIT = 4;
 
     /**
@@ -184,13 +184,25 @@ public strictfp class RobotPlayer {
     		break; 
     	}
     	
-    	if (mode != 4 && mode != 5 && mode != 7) {
+    	if (mode < 4 || mode == 6) {
     		for (int i = 0; i < 8; i++) {
-    			if (rc.senseElevation(rc.adjacentLocation(moveDir)) > 3 && hqDirection() == Direction.CENTER)
-    				tryDig(moveDir);
-    			else if (!tryMove(moveDir))
-    				moveDir = moveDir.rotateRight();
-    		}
+    			if (!tryMove(moveDir)) {
+    				if (rc.senseElevation(rc.adjacentLocation(moveDir)) > rc.senseElevation(rc.getLocation())) {
+    					if (hqDirection() == Direction.CENTER && enemyHQDirection() == Direction.CENTER)
+    						tryDig(moveDir);
+    					else
+    						moveDir = moveDir.rotateRight();
+    				}
+    				else if (rc.senseElevation(rc.adjacentLocation(moveDir)) < rc.senseElevation(rc.getLocation()) && !rc.senseFlooding(rc.adjacentLocation(moveDir))) {
+    					if (hqDirection() == Direction.CENTER && enemyHQDirection() == Direction.CENTER)
+    						tryDig(Direction.CENTER);
+    					else
+    						moveDir = moveDir.rotateRight();
+    				}
+    				else
+    					moveDir = moveDir.rotateRight();
+    			}
+    		}	
     	}
     }
 
