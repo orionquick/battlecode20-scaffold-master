@@ -32,7 +32,7 @@ public strictfp class RobotPlayer {
 	
     static int mode;
 
-    static final int MINERLIMIT = 30;
+    static final int MINERLIMIT = 5;
     static final int LANDSCAPERLIMIT = 4;
 
     /**
@@ -58,9 +58,6 @@ public strictfp class RobotPlayer {
         
         // for doing tasks
         mode = 0;
-
-		hqLocation = rc.adjacentLocation(Direction.SOUTH);			
-		dsLocation = rc.getLocation().add(Direction.SOUTHEAST).add(Direction.EAST);
         
         while (true) {
             turnCount ++;
@@ -92,12 +89,17 @@ public strictfp class RobotPlayer {
     }
 
     static void runHQ() throws GameActionException {
-    	if (minerCount < MINERLIMIT)
-			if (tryBuild(RobotType.MINER, Direction.NORTH))
-				minerCount++;
+    	for (Direction dir : directions)
+    		if (minerCount < MINERLIMIT)
+				tryBuild(RobotType.MINER, dir);
     }
 
     static void runMiner() throws GameActionException {
+    	
+    	if (turnCount == 1) {
+    		hqLocation = rc.adjacentLocation(hqDirection());			
+    		dsLocation = hqLocation.add(Direction.EAST).add(Direction.EAST);
+    	}
     	
     	tryBuild(RobotType.DESIGN_SCHOOL, dsLocation);
     	
@@ -122,7 +124,7 @@ public strictfp class RobotPlayer {
         	moveDir = soupDirection();
         
 		for (int i = 0; i < 8; i++)
-			if (moveDir == prevDir.opposite() || !tryMove(moveDir))
+			if (!tryMove(moveDir))
 				moveDir = moveDir.rotateRight();
 		
     	if (mode == 2 && rc.getLocation().distanceSquaredTo(miningLocation) < 4)	// if going to mine and near mining location
@@ -139,9 +141,9 @@ public strictfp class RobotPlayer {
     }
 
     static void runDesignSchool() throws GameActionException {
-    	if (landscaperCount < LANDSCAPERLIMIT)
-			if (tryBuild(RobotType.LANDSCAPER, Direction.NORTH))
-				landscaperCount++;    	
+    	for (Direction dir : directions)
+    		if (landscaperCount < LANDSCAPERLIMIT)
+    			tryBuild(RobotType.LANDSCAPER, dir);
     }
 
     static void runFulfillmentCenter() throws GameActionException {
@@ -150,16 +152,22 @@ public strictfp class RobotPlayer {
 
     static void runLandscaper() throws GameActionException {
     	if (turnCount == 1)	{															
-    		hqLocation = rc.adjacentLocation(Direction.SOUTHWEST).add(Direction.WEST); 	
+        	dsLocation = rc.adjacentLocation(dsDirection());			
+        	hqLocation = dsLocation.add(Direction.WEST).add(Direction.WEST);
     		hqTest1 = new MapLocation(rc.getMapWidth() - hqLocation.x, hqLocation.y);
     		hqTest2 = new MapLocation(rc.getMapWidth() - hqLocation.x, rc.getMapHeight() - hqLocation.y);
     		hqTest3 = new MapLocation(hqLocation.x, rc.getMapHeight() - hqLocation.y);
     	}
     	
-    	if(mode < 4 && adjacentToEnemyHQ())
+    	System.out.println(mode);
+    	
+    	if (mode != 7 && rc.getDirtCarrying() == RobotType.LANDSCAPER.dirtLimit && enemyHQDirection() == Direction.CENTER)
+    		mode = 6;
+    	
+    	if (mode < 4 && adjacentToEnemyHQ())
     		mode = 4;
     	
-    	if(mode < 4 && enemyHQDirection() != Direction.CENTER)
+    	if (mode < 4 && enemyHQDirection() != Direction.CENTER)
     		mode = 3;
     	
     	switch (mode) {
@@ -167,13 +175,23 @@ public strictfp class RobotPlayer {
     		case 1 : moveDir = rc.getLocation().directionTo(hqTest2); if (rc.getLocation().distanceSquaredTo(hqTest2) < 4) if (enemyHQDirection() == Direction.CENTER) mode++;	break;
     		case 2 : moveDir = rc.getLocation().directionTo(hqTest3);																											break;
     		case 3 : moveDir = enemyHQDirection();																																break;
-    		default:																																							break;
+    		case 4 : if (tryDig(enemyHQDirection().rotateRight().rotateRight())) mode++;																						break;
+    		case 5 : if (tryDeposit(enemyHQDirection())) mode--;																												break;
+    		case 6 : moveDir = rc.getLocation().directionTo(hqLocation); if (adjacentToHQ()) mode++;																			break;
+    		case 7 : if (!rc.isLocationOccupied(rc.getLocation().add(rc.getLocation().directionTo(hqLocation).rotateRight().rotateRight()))) 
+    					if (!tryDeposit(rc.getLocation().directionTo(hqLocation).rotateRight().rotateRight()))
+    						mode = 0;
+    		break; 
     	}
     	
-    	if (mode < 4)
-    		for (int i = 0; i < 8; i++)
-    			if (moveDir == prevDir.opposite() || !tryMove(moveDir))
+    	if (mode != 4 && mode != 5 && mode != 7) {
+    		for (int i = 0; i < 8; i++) {
+    			if (rc.senseElevation(rc.adjacentLocation(moveDir)) > 3 && hqDirection() == Direction.CENTER)
+    				tryDig(moveDir);
+    			else if (!tryMove(moveDir))
     				moveDir = moveDir.rotateRight();
+    		}
+    	}
     }
 
     static void runDeliveryDrone() throws GameActionException {
@@ -195,6 +213,20 @@ public strictfp class RobotPlayer {
     	return Direction.CENTER;
     }
     
+    static Direction hqDirection() throws GameActionException {
+    	for (RobotInfo robot : rc.senseNearbyRobots())
+    		if (robot.type == RobotType.HQ && robot.team == rc.getTeam())
+    			return rc.getLocation().directionTo(robot.location);
+    	return Direction.CENTER;
+    }
+    
+    static Direction dsDirection() throws GameActionException {
+    	for (RobotInfo robot : rc.senseNearbyRobots())
+    		if (robot.type == RobotType.DESIGN_SCHOOL && robot.team == rc.getTeam())
+    			return rc.getLocation().directionTo(robot.location);
+    	return Direction.CENTER;
+    }
+    
     static Direction enemyHQDirection() throws GameActionException {
     	for (RobotInfo robot : rc.senseNearbyRobots())
     		if (robot.type == RobotType.HQ && robot.team == rc.getTeam().opponent())
@@ -202,6 +234,13 @@ public strictfp class RobotPlayer {
     	return Direction.CENTER;
     }
 
+    static boolean adjacentToHQ() throws GameActionException {
+    	for (RobotInfo robot : rc.senseNearbyRobots(1))
+    		if (robot.type == RobotType.HQ && robot.team == rc.getTeam())
+    			return true;
+    	return false;
+    }    
+    
     static boolean adjacentToEnemyHQ() throws GameActionException {
     	for (RobotInfo robot : rc.senseNearbyRobots(1))
     		if (robot.type == RobotType.HQ && robot.team == rc.getTeam().opponent())
@@ -278,6 +317,10 @@ public strictfp class RobotPlayer {
      */
     static boolean tryBuild(RobotType type, Direction dir) throws GameActionException {
         if (rc.isReady() && rc.canBuildRobot(type, dir)) {
+	    	if (type == RobotType.MINER)
+	    		minerCount++;
+	    	if (type == RobotType.LANDSCAPER)
+	    		landscaperCount++;
             rc.buildRobot(type, dir);
             return true;
         } else return false;
@@ -312,6 +355,34 @@ public strictfp class RobotPlayer {
         } else return false;
     }
 
+    /**
+     * Attempts to dig dirt in a given direction.
+     *
+     * @param dir The intended direction of digging
+     * @return true if a move was performed
+     * @throws GameActionException
+     */
+    static boolean tryDig(Direction dir) throws GameActionException {
+        if (rc.isReady() && rc.canDigDirt(dir)) {
+            rc.digDirt(dir);
+            return true;
+        } else return false;
+    }
+    
+    /**
+     * Attempts to deposit dirt in a given direction.
+     *
+     * @param dir The intended direction of depositing
+     * @return true if a move was performed
+     * @throws GameActionException
+     */
+    static boolean tryDeposit(Direction dir) throws GameActionException {
+        if (rc.isReady() && rc.canDepositDirt(dir)) {
+            rc.depositDirt(dir);
+            return true;
+        } else return false;
+    }    
+    
     /**
      * Attempts to refine soup in a given direction.
      *
