@@ -32,7 +32,7 @@ public strictfp class RobotPlayer {
 	
     static int mode;
 
-    static final int MINERLIMIT = 10;
+    static final int MINERLIMIT = 4;
     static final int LANDSCAPERLIMIT = 4;
 
     /**
@@ -90,7 +90,7 @@ public strictfp class RobotPlayer {
 
     static void runHQ() throws GameActionException {
     	for (Direction dir : directions)
-    		if (minerCount < MINERLIMIT)
+    		if (minerCount < MINERLIMIT || turnCount % 50 == 0)
 				tryBuild(RobotType.MINER, dir);
     }
 
