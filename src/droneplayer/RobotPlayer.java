@@ -26,8 +26,6 @@ public strictfp class RobotPlayer {
     static MapLocation fcLocation;
     static MapLocation dsLocation;
     
-    
-    
     static int mode; // explore / to refinery / to mine
     
     /**
@@ -88,8 +86,7 @@ public strictfp class RobotPlayer {
     			minerCount++;
     }
     
-    static void runMiner() throws GameActionException {
-    	
+    static void runMiner() throws GameActionException {	
     	if (turnCount == 1) {
     		hqLocation = rc.adjacentLocation(hqDirection());			
     		fcLocation = hqLocation.add(Direction.EAST).add(Direction.EAST);
@@ -97,7 +94,6 @@ public strictfp class RobotPlayer {
     	
     	tryBuild(RobotType.FULFILLMENT_CENTER, fcLocation);
     
-    	
         for (Direction dir : directions)											// in all directions
         	if(tryMine(dir))														// try to mine soup
         		miningLocation = rc.getLocation().add(dir);							// if mined, save location
@@ -151,17 +147,20 @@ public strictfp class RobotPlayer {
     }
 
     static void runDeliveryDrone() throws GameActionException {
-        Team enemy = rc.getTeam().opponent();
+    	Team enemy = rc.getTeam().opponent();
+    	MapLocation testLoc;
         if (!rc.isCurrentlyHoldingUnit()) {
-            // See if there are any enemy robots within striking range (distance 1 from lumberjack's radius)
-            RobotInfo[] robots = rc.senseNearbyRobots(GameConstants.DELIVERY_DRONE_PICKUP_RADIUS_SQUARED, enemy);
-
-            if (robots.length > 0) {
-                // Pick up a first robot within range
+            RobotInfo[] robots = rc.senseNearbyRobots(GameConstants.DELIVERY_DRONE_PICKUP_RADIUS_SQUARED, enemy); // See if there are any enemy robots within striking range (distance 1 from lumberjack's radius)
+            if (robots.length > 0) { // Pick up a first robot within range       
                 rc.pickUpUnit(robots[0].getID());
                 System.out.println("I picked up " + robots[0].getID() + "!");
+            	for (int x = -4; x <= 4; x++)
+            		for (int y = -4; y <= 4; y++)
+            			if (rc.senseFlooding(testLoc = new MapLocation(rc.getLocation().x + x, rc.getLocation().y + y)))
+            				rc.dropUnit(Direction.CENTER);
             }
-        } else {
+        } 
+        else {
             // No close robots, so search for robots within sight radius
             tryMove(randomNonCardinalDirection());
         }
