@@ -174,9 +174,9 @@ public strictfp class RobotPlayer {
     	if (turnCount == 1)	{															
         	dsLocation = rc.adjacentLocation(dsDirection());
         	hqLocation = dsLocation.add(Direction.SOUTH).add(Direction.SOUTHWEST);
-    		hqTest1 = new MapLocation(rc.getMapWidth() - hqLocation.x, hqLocation.y);
-    		hqTest2 = new MapLocation(rc.getMapWidth() - hqLocation.x, rc.getMapHeight() - hqLocation.y);
-    		hqTest3 = new MapLocation(hqLocation.x, rc.getMapHeight() - hqLocation.y);
+    		hqTest1 = new MapLocation(rc.getMapWidth() - hqLocation.x, hqLocation.y);						// does not actually cause an error
+    		hqTest2 = new MapLocation(rc.getMapWidth() - hqLocation.x, rc.getMapHeight() - hqLocation.y);	// does not actually cause an error
+    		hqTest3 = new MapLocation(hqLocation.x, rc.getMapHeight() - hqLocation.y);						// does not actually cause an error
     		
     		if (dsDirection() == Direction.NORTH)
     			subType = RUSHER;
