@@ -230,12 +230,21 @@ public strictfp class RobotPlayer {
 	    	}
 	    	
 	    	if (mode < 4) {
-	    		for (int i = 0; i < 16; i++) { 
+	    		for (int i = 0; i < 16; i++) { 	    			
 	    			if (moveDir == prevDir.opposite() || !tryMove(moveDir)) {
-	    				if (i > 7)
+	    				if (rc.senseElevation(rc.getLocation().add(moveDir)) > rc.senseElevation(rc.getLocation()) + 3) {
+	    					tryDig(moveDir);
+	    				} 
+	    				else if (rc.senseElevation(rc.getLocation().add(moveDir)) < rc.senseElevation(rc.getLocation()) - 3 && !rc.senseFlooding(rc.getLocation().add(moveDir))) {
+	    					tryDig(Direction.CENTER);
+	    				}
+	    				else if (i > 7) {
 	    					if(!tryMove(moveDir))
 	    						moveDir = moveDir.rotateRight();
-	    				moveDir = moveDir.rotateRight();
+	    				}
+	    				else {
+	    					moveDir = moveDir.rotateRight();
+	    				}
 	    			}
 	    		}
 	    	}
@@ -286,7 +295,6 @@ public strictfp class RobotPlayer {
     			if (rc.canSenseLocation(testLoc = new MapLocation(rc.getLocation().x + x, rc.getLocation().y + y)))
     				if (rc.senseSoup(testLoc) > 0 && !rc.senseFlooding(testLoc))
     					return rc.getLocation().directionTo(testLoc);
-
     	return Direction.CENTER;
     }
 
@@ -476,7 +484,13 @@ public strictfp class RobotPlayer {
      * @throws GameActionException
      */
     static boolean tryDig(Direction dir) throws GameActionException {
-        if (rc.isReady() && rc.canDigDirt(dir)) {
+    	MapLocation testLoc = rc.getLocation().add(dir);
+    	RobotInfo testRobot;
+    	if (rc.isLocationOccupied(testLoc))
+    		testRobot = rc.senseRobotAtLocation(testLoc);
+    	else
+    		testRobot = null;
+        if (rc.isReady() && rc.canDigDirt(dir) && (dir == Direction.CENTER || testRobot == null || testRobot.getTeam() != rc.getTeam() || testRobot.getType() == RobotType.HQ)) {
             rc.digDirt(dir);
             return true;
         } else return false;
