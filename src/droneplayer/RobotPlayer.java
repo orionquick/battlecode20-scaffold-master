@@ -167,7 +167,18 @@ public strictfp class RobotPlayer {
     }
 
     static void runNetGun() throws GameActionException {
-
+    	Team enemy = rc.getTeam().opponent();
+    	RobotInfo robots[] = rc.senseNearbyRobots(GameConstants.NET_GUN_SHOOT_RADIUS_SQUARED, enemy);
+    	
+    	if (robots.length == 1) {
+    		rc.shootUnit(robots[0].getID());
+    	}
+    	
+    	if (robots.length > 1) {
+    		for (int i = 0; i < robots.length; i++) {
+    			rc.shootUnit(robots[i].getID());
+    		}
+    	}
     }
 
     /**
