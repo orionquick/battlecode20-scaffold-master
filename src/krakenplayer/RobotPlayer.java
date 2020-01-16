@@ -41,8 +41,8 @@ public strictfp class RobotPlayer {
     static int subType;
     
     static final int MINERLIMIT = 6;
-    static final int CAMPERLIMIT = 8;
-    static final int RUSHERLIMIT = 4;
+    static final int CAMPERLIMIT = 7;
+    static final int RUSHERLIMIT = 2;
     static final int DAMMERLIMIT = 12;
     static final int MINER = 0;
     static final int CAMPER = 1;
@@ -105,6 +105,11 @@ public strictfp class RobotPlayer {
 
     static void runHQ() throws GameActionException {
 
+    	for (RobotInfo robot : rc.senseNearbyRobots())
+    		if (robot.team == rc.getTeam().opponent() && robot.type == RobotType.DELIVERY_DRONE)
+    			if (rc.canShootUnit(robot.ID))
+    				rc.shootUnit(robot.ID);
+    	
 		for (Direction dir : minerDirections)
 			if (minerCount < MINERLIMIT)
     			tryBuild(RobotType.MINER, dir);
@@ -129,40 +134,115 @@ public strictfp class RobotPlayer {
     		for (Direction dir : camperDirections)
     			if (hqDirection() == dir.opposite())
     				subType = CAMPER;
+    		
     	}
     	
-    	System.out.println(subType);
-
-    	tryBuild(RobotType.DESIGN_SCHOOL, dsLocation);
-    	tryBuild(RobotType.REFINERY, rfLocation);
-
-    	if (subType == MINER) {
+    	if (dsDirection() == Direction.CENTER)
+    		tryBuild(RobotType.DESIGN_SCHOOL, dsLocation);
+    	
+    	if (rfDirection() == Direction.CENTER)
+    		tryBuild(RobotType.REFINERY, rfLocation);
+    	
+    	System.out.println(rc.getLocation());
+    	System.out.println(dsLocation.add(Direction.SOUTH));
+    	
+    	if (rc.canSenseLocation(dsLocation) && dsDirection() == Direction.CENTER && (!rc.isLocationOccupied(dsLocation.add(Direction.SOUTH)) || rc.getLocation().equals(dsLocation.add(Direction.SOUTH))) && rc.getRoundNum() > 50) {
+    		if (!rc.getLocation().equals(dsLocation.add(Direction.SOUTH))) {
+    			tryMove(rc.getLocation().directionTo(dsLocation.add(Direction.SOUTH)));
+    		}
+    	}
+    	
+    	else {
+	    	if (subType == MINER) {
+	    		
+	        	Direction soupDirection = soupDirection(5);
+	        	int soupAmount = soupAmount(2);
+	        	Direction rfDirection = rfDirection();
+	        	
+	        	if (!rc.canSenseLocation(hqLocation) && rfDirection == Direction.CENTER && soupAmount > 1000)
+	        		for (Direction dir : directions)
+	        			tryBuild(RobotType.REFINERY, dir);
+	        	
+		    	
+		        for (Direction dir : directions)											// in all directions
+		        	if(tryMine(dir))														// try to mine soup
+		        		miningLocation = rc.getLocation().add(dir);							// if mined, save location
+		
+		        for (Direction dir : directions)											// in all directions
+		        	if (tryRefine(dir))														// try to refine soup
+		        		mode = 2;															// if refined, go back to mining location
+		        
+		        if (rc.getSoupCarrying() == RobotType.MINER.soupLimit)						// if soup is full
+		        	mode = 1;																// return to HQ
+		        
+		        switch (mode) {
+		        	case 0 : 	tryMove(moveDir); if(moveCount % 5 == 0) moveDir = randomNonCardinalDirection();	break;
+			        case 1 : 	if (rfDirection() == Direction.CENTER) 
+			        				moveDir = rc.getLocation().directionTo(hqLocation);
+			        			else 
+			        				moveDir = rfDirection;	
+			        			break;
+			        case 2 : 	moveDir = rc.getLocation().directionTo(miningLocation); 							break;
+		        }
+		        
+		        if (rc.getSoupCarrying() < RobotType.MINER.soupLimit && soupDirection != Direction.CENTER)
+		        	moveDir = soupDirection;
+		        
+				for (int i = 0; i < 16; i++) { 
+					if (moveDir == prevDir.opposite() || !tryMove(moveDir)) {
+						if (i > 7)
+							if(!tryMove(moveDir))
+								moveDir = moveDir.rotateRight();
+						moveDir = moveDir.rotateRight();
+					}
+				}
+				
+		    	if (mode == 2 && rc.getLocation().distanceSquaredTo(miningLocation) < 4)	// if going to mine and near mining location
+		    		if (soupDirection == Direction.CENTER)									// and no soup nearby
+		    			mode = rc.getSoupCarrying() == 0 ? 0 : 1;							// explore if soup empty, back to HQ if not
+	    	}
 	    	
-	        for (Direction dir : directions)											// in all directions
-	        	if(tryMine(dir))														// try to mine soup
-	        		miningLocation = rc.getLocation().add(dir);							// if mined, save location
+	    	if (subType == CAMPER) {
+	    		
+	    		if (mode < 3 && enemyFCLocation() != null) {
+	    			enemyFCLocation = enemyFCLocation();
+	    			mode = 3;
+	    		}
+	    		
+		    	switch (mode) {
+		    		case 0 : 	moveDir = rc.getLocation().directionTo(hqTest1); 
+		    					if (rc.getLocation().distanceSquaredTo(hqTest1) < 4) {
+		    						if (enemyHQLocation() == null) {
+		    							mode++;	
+		    						}
+		    					} break;
+		    					
+		    		case 1 : 	moveDir = rc.getLocation().directionTo(hqTest2); 
+		    					if (rc.getLocation().distanceSquaredTo(hqTest2) < 4) {
+		    						if (enemyHQLocation() == null) {
+		    							mode++;		
+		    						}
+		    					} break;
+		    					
+		    		case 2 : 	moveDir = rc.getLocation().directionTo(hqTest3);
+								if (rc.getLocation().distanceSquaredTo(hqTest3) < 4) {
+									if (enemyHQLocation() == null) {
+										mode = 0;		
+									}
+								} break;
+		    					
+		    		case 3 : 	moveDir = enemyFCDirection();
+		    					if (rc.getLocation().distanceSquaredTo(enemyFCLocation()) < 16) {
+	    							if(!tryBuild(RobotType.NET_GUN, enemyFCDirection()))
+	    								for (RobotInfo robot : rc.senseNearbyRobots())
+	    									if (robot.team == rc.getTeam().opponent() && robot.type == RobotType.DELIVERY_DRONE)
+	    										moveDir = rc.getLocation().directionTo(robot.location).opposite();
+		    					} break;
 	
-	        for (Direction dir : directions)											// in all directions
-	        	if (tryRefine(dir))														// try to refine soup
-	        		mode = 2;															// if refined, go back to mining location
-	        
-	        if (rc.getSoupCarrying() == RobotType.MINER.soupLimit)						// if soup is full
-	        	mode = 1;																// return to HQ
-	        
-	        switch (mode) {
-	        	case 0 : 	tryMove(moveDir); if(moveCount % 5 == 0) moveDir = randomNonCardinalDirection();	break;
-		        case 1 : 	if (rfDirection() == Direction.CENTER) 
-		        				moveDir = rc.getLocation().directionTo(hqLocation);
-		        			else 
-		        				moveDir = rc.getLocation().directionTo(rfLocation);	
-		        			break;
-		        case 2 : 	moveDir = rc.getLocation().directionTo(miningLocation); 							break;
-	        }
-	        
-	        if (rc.getSoupCarrying() < RobotType.MINER.soupLimit && soupDirection() != Direction.CENTER)
-	        	moveDir = soupDirection();
-	        
-			for (int i = 0; i < 16; i++) { 
+		    	}
+	    	}
+	    	
+			for (int i = 0; i < 16; i++) {
 				if (moveDir == prevDir.opposite() || !tryMove(moveDir)) {
 					if (i > 7)
 						if(!tryMove(moveDir))
@@ -170,61 +250,7 @@ public strictfp class RobotPlayer {
 					moveDir = moveDir.rotateRight();
 				}
 			}
-			
-	    	if (mode == 2 && rc.getLocation().distanceSquaredTo(miningLocation) < 4)	// if going to mine and near mining location
-	    		if (soupDirection() == Direction.CENTER)								// and no soup nearby
-	    			mode = rc.getSoupCarrying() == 0 ? 0 : 1;							// explore if soup empty, back to HQ if not
     	}
-    	
-    	if (subType == CAMPER) {
-    		
-    		if (mode < 3 && enemyFCLocation() != null) {
-    			enemyFCLocation = enemyFCLocation();
-    			mode = 3;
-    		}
-    		
-	    	switch (mode) {
-	    		case 0 : 	moveDir = rc.getLocation().directionTo(hqTest1); 
-	    					if (rc.getLocation().distanceSquaredTo(hqTest1) < 4) {
-	    						if (enemyHQLocation() == null) {
-	    							mode++;	
-	    						}
-	    					} break;
-	    					
-	    		case 1 : 	moveDir = rc.getLocation().directionTo(hqTest2); 
-	    					if (rc.getLocation().distanceSquaredTo(hqTest2) < 4) {
-	    						if (enemyHQLocation() == null) {
-	    							mode++;		
-	    						}
-	    					} break;
-	    					
-	    		case 2 : 	moveDir = rc.getLocation().directionTo(hqTest3);
-							if (rc.getLocation().distanceSquaredTo(hqTest3) < 4) {
-								if (enemyHQLocation() == null) {
-									mode = 0;		
-								}
-							} break;
-	    					
-	    		case 3 : 	moveDir = enemyFCDirection();
-	    					if (rc.getLocation().distanceSquaredTo(enemyFCLocation()) < 16) {
-    							if(!tryBuild(RobotType.NET_GUN, enemyFCDirection()))
-    								for (RobotInfo robot : rc.senseNearbyRobots())
-    									if (robot.team == rc.getTeam().opponent() && robot.type == RobotType.DELIVERY_DRONE)
-    										tryMove(rc.getLocation().directionTo(robot.location).opposite());
-	    					} break;
-
-	    	}
-    	}
-    	
-		for (int i = 0; i < 16; i++) {
-			if (moveDir == prevDir.opposite() || !tryMove(moveDir)) {
-				if (i > 7)
-					if(!tryMove(moveDir))
-						moveDir = moveDir.rotateRight();
-				moveDir = moveDir.rotateRight();
-			}
-		}
-    	
     }
 
     static void runRefinery() throws GameActionException {
@@ -242,7 +268,7 @@ public strictfp class RobotPlayer {
     			tryBuild(RobotType.LANDSCAPER, dir);
     	
 		for (Direction dir : dammerDirections)
-			if (landscaperCount >= RUSHERLIMIT && landscaperCount < DAMMERLIMIT)
+			if (landscaperCount >= RUSHERLIMIT && landscaperCount < DAMMERLIMIT && (landscaperCount < 6 || turnCount > 165))
     			tryBuild(RobotType.LANDSCAPER, dir);
     }
 
@@ -270,6 +296,10 @@ public strictfp class RobotPlayer {
     		
     		if (mode < 3 && enemyHQLocation() != null) {
     			enemyHQLocation = enemyHQLocation();
+    			mode = 3;
+    		}
+    		
+    		if (mode > 3 && !adjacentToEnemyHQ()) {
     			mode = 3;
     		}
     		
@@ -372,14 +402,25 @@ public strictfp class RobotPlayer {
     				rc.shootUnit(robot.ID);
     }
 
-    static Direction soupDirection() throws GameActionException {
+    static Direction soupDirection(int rad) throws GameActionException {
     	MapLocation testLoc;
-    	for (int x = -5; x <= 5; x++)
-    		for (int y = -5; y <= 5; y++)
+    	for (int x = -rad; x <= rad; x++)
+    		for (int y = -rad; y <= rad; y++)
     			if (rc.canSenseLocation(testLoc = new MapLocation(rc.getLocation().x + x, rc.getLocation().y + y)))
     				if (rc.senseSoup(testLoc) > 0 && !rc.senseFlooding(testLoc))
     					return rc.getLocation().directionTo(testLoc);
     	return Direction.CENTER;
+    }
+    
+    static int soupAmount(int rad) throws GameActionException {
+    	MapLocation testLoc;
+    	int amt = 0;
+    	for (int x = -rad; x <= rad; x++)
+    		for (int y = -rad; y <= rad; y++)
+    			if (rc.canSenseLocation(testLoc = new MapLocation(rc.getLocation().x + x, rc.getLocation().y + y)))
+    				if (rc.senseSoup(testLoc) > 0 && !rc.senseFlooding(testLoc))
+    					amt += rc.senseSoup(testLoc);
+    	return amt;
     }
 
     static MapLocation hqLocation() throws GameActionException {
